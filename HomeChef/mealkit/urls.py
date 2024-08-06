@@ -35,12 +35,14 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # URL pattern for user registration
-    path('customers/', CustomerRegisterView.as_view(), name='customer-register'),
+    path('register/', CustomerRegisterView.as_view(), name='customer-register'),
 
     # URL pattern for user login
     path('login/', UserLoginView.as_view(), name='login'),
 
-    # URL pattern for user profile view
+    # URL pattern for listing customers view
+    path('customers/', CustomerListView.as_view(), name='customer-list'),
+     # URL pattern for customers detail view
     path('customers/<int:pk>/', CustomerDetailView.as_view(), name='customer-detail'),
 
     # URL pattern for listing companies

@@ -70,18 +70,18 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
         email = validated_data.get('email')
 
          # Extract subscription plan if provided
-        # subscription_plan_data = validated_data.pop('subscription_plan', None)
+        subscription_plan_data = validated_data.pop('subscription_plan', None)
 
         # Create a User object for the customer
         user = User.objects.create_user(username=username, password=password, email=email, is_customer=True)
         # Create a Customer object and associate it with the User object
         customer = Customer.objects.create(user=user, **validated_data)
 
-         # If subscription plan is provided, set it for the customer
-        # if subscription_plan_data:
-        #     subscription_plan = SubscriptionPlan.objects.create(**subscription_plan_data)
-        #     customer.subscription_plan = subscription_plan
-        #     customer.save()
+        # If subscription plan is provided, set it for the customer
+        if subscription_plan_data:
+            subscription_plan = SubscriptionPlan.objects.create(**subscription_plan_data)
+            customer.subscription_plan = subscription_plan
+            customer.save()
         
         return customer
 
