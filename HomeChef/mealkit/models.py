@@ -153,12 +153,14 @@ class Order(models.Model):
     user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
     # Foreign key relationship with MealKit model
     meal_kit = models.ForeignKey(MealKit, on_delete=models.CASCADE, related_name='orders')
+    total_price=models.IntegerField(null=True)
     # Status of the order
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=PENDING)
     # Payment status of the order
     payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_PENDING)
     # Date and time when the order was placed
     order_date = models.DateTimeField(auto_now_add=True)
+    
 
     # String representation of the Order model
     def __str__(self):
