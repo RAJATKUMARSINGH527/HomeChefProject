@@ -1,9 +1,11 @@
 from rest_framework import serializers
-from .models import User, Customer, MealKit, Order, Review, SubscriptionPlan, Company, ChefPlan, GiftCard, CartItem
+from .models import *
 from django.contrib.auth.hashers import make_password
 
 
+# Serializer for the Company model
 class CompanySerializer(serializers.ModelSerializer):
+    # Meta class to specify model and fields
     class Meta:
         model = Company
         fields = '__all__'
@@ -18,15 +20,16 @@ class CompanyRegisterSerializer(serializers.ModelSerializer):
         model = Company
         fields = ['id', 'company_name', 'password', 'email', 'food_type', 'category']
 
+    # Method to create a new Company instance
     def create(self, validated_data):
-        # Extract name and password from validated data
+        # Extract company_name from validated data
         company_name = validated_data.get('company_name')
+        # Extract and hash the password
         password = validated_data.pop('password')
-        # Hash the password
         password = make_password(password)
-        # Extract email
+        # Extract email from validated data
         email = validated_data.get('email')
-        # Create a User object for the company
+        # Create a User object for the company with the hashed password
         user = User.objects.create_user(username=company_name, password=password, email=email, is_company=True)
         # Create a Company object and associate it with the User object
         company = Company.objects.create(user=user, **validated_data)
@@ -63,21 +66,21 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ['id', 'username', 'password', 'customer_name', 'age', 'gender', 'mobile', 'address', 'subscription_plan']
 
+    # Method to create a new Customer instance
     def create(self, validated_data):
         # Extract username and password from validated data
         username = validated_data.pop('username')
         password = validated_data.pop('password')
+        # Extract email from validated data
         email = validated_data.get('email')
-
-         # Extract subscription plan if provided
+        # Extract subscription plan data if provided
         subscription_plan_data = validated_data.pop('subscription_plan', None)
-
         # Create a User object for the customer
         user = User.objects.create_user(username=username, password=password, email=email, is_customer=True)
         # Create a Customer object and associate it with the User object
         customer = Customer.objects.create(user=user, **validated_data)
 
-        # If subscription plan is provided, set it for the customer
+        # If subscription plan data is provided, create a SubscriptionPlan object and set it for the customer
         if subscription_plan_data:
             subscription_plan = SubscriptionPlan.objects.create(**subscription_plan_data)
             customer.subscription_plan = subscription_plan

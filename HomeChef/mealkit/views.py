@@ -3,11 +3,8 @@ from rest_framework import generics, status
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from .serializers import *
-
-from django_filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter
-
+from rest_framework.filters import SearchFilter, OrderingFilter
 import razorpay
 from django.conf import settings
 from rest_framework.views import APIView
@@ -24,13 +21,16 @@ class CustomPagination(PageNumberPagination):
     # Set the maximum page size
     max_page_size = 10
 
-
+# Customer Register View
 class CustomerRegisterView(generics.CreateAPIView):
     # Allow any user to access this view
     permission_classes = [AllowAny]
+    # Use the CustomerRegisterSerializer for this view
+    serializer_class = CustomerRegisterSerializer
+
     def post(self, request, *args, **kwargs):
         # Serialize the incoming data
-        serializer = CustomerRegisterSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             # Save the new customer if the data is valid
             customer = serializer.save()
@@ -43,13 +43,14 @@ class CustomerRegisterView(generics.CreateAPIView):
 class UserLoginView(APIView):
     # Allow any user to access this view
     permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         # Get username and password from the request data
         username = request.data.get('username')
         password = request.data.get('password')
         # Find the user by username
         user = User.objects.filter(username=username).first()
-        
+
         if user is not None:
             # Check the type of user and generate JWT tokens
             if user.is_customer or user.is_company or user.is_chef:
@@ -72,13 +73,21 @@ class UserLoginView(APIView):
         else:
             # Return an error if the credentials are invalid
             return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-# Customer Registration View
+
+# Customer List View
 class CustomerListView(generics.ListAPIView):
     # Define the queryset to retrieve all Customer objects
     queryset = Customer.objects.all()
     # Use CustomerSerializer to serialize the queryset
     serializer_class = CustomerSerializer
+    # Add filter backends for searching, ordering, and filtering
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    # Define search fields
+    search_fields = ['customer_name', 'age']
+    # Define ordering fields
+    ordering_fields = ['customer_name', 'age']
+    # Define filterset fields
+    filterset_fields = ['customer_name']
 
 # Customer Detail View
 class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -87,7 +96,7 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Use CustomerSerializer to serialize the queryset
     serializer_class = CustomerSerializer
 
-# Company Views
+# Company List View
 class CompanyListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all Company objects
     queryset = Company.objects.all()
@@ -100,17 +109,18 @@ class CompanyListView(generics.ListCreateAPIView):
     # Define search fields
     search_fields = ['food_type', 'category']
     # Define ordering fields
-    ordering_fields = ['name', 'food_type']
+    ordering_fields = ['company_name', 'food_type']
     # Define filterset fields
-    filterset_fields = ['name']
+    filterset_fields = ['company_name']
 
+# Company Detail View
 class CompanyDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all Company objects
     queryset = Company.objects.all()
     # Use CompanySerializer to serialize the queryset
     serializer_class = CompanySerializer
 
-# ChefPlan Views
+# Chef Plan List View
 class ChefPlanListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all ChefPlan objects
     queryset = ChefPlan.objects.all()
@@ -127,13 +137,14 @@ class ChefPlanListView(generics.ListCreateAPIView):
     # Define filterset fields
     filterset_fields = ['price']
 
+# Chef Plan Detail View
 class ChefPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all ChefPlan objects
     queryset = ChefPlan.objects.all()
     # Use ChefPlanSerializer to serialize the queryset
     serializer_class = ChefPlanSerializer
 
-# SubscriptionPlan Views
+# Subscription Plan List View
 class SubscriptionPlanListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all SubscriptionPlan objects
     queryset = SubscriptionPlan.objects.all()
@@ -150,13 +161,14 @@ class SubscriptionPlanListView(generics.ListCreateAPIView):
     # Define filterset fields
     filterset_fields = ['price']
 
+# Subscription Plan Detail View
 class SubscriptionPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all SubscriptionPlan objects
     queryset = SubscriptionPlan.objects.all()
     # Use SubscriptionPlanSerializer to serialize the queryset
     serializer_class = SubscriptionPlanSerializer
 
-# MealKit Views
+# Meal Kit List View
 class MealKitListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all MealKit objects
     queryset = MealKit.objects.all()
@@ -169,17 +181,18 @@ class MealKitListView(generics.ListCreateAPIView):
     # Define search fields
     search_fields = ['price', 'chef__user__username']
     # Define ordering fields
-    ordering_fields = ['price', 'name']
+    ordering_fields = ['price', 'meal_name']
     # Define filterset fields
     filterset_fields = ['price']
 
+# Meal Kit Detail View
 class MealKitDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all MealKit objects
     queryset = MealKit.objects.all()
     # Use MealKitSerializer to serialize the queryset
     serializer_class = MealKitSerializer
 
-# GiftCard Views
+# Gift Card List View
 class GiftCardListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all GiftCard objects
     queryset = GiftCard.objects.all()
@@ -196,13 +209,14 @@ class GiftCardListView(generics.ListCreateAPIView):
     # Define filterset fields
     filterset_fields = ['value']
 
+# Gift Card Detail View
 class GiftCardDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all GiftCard objects
     queryset = GiftCard.objects.all()
     # Use GiftCardSerializer to serialize the queryset
     serializer_class = GiftCardSerializer
 
-# CartItem Views
+# Cart Item List View
 class CartItemListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all CartItem objects
     queryset = CartItem.objects.all()
@@ -219,36 +233,14 @@ class CartItemListView(generics.ListCreateAPIView):
     # Define filterset fields
     filterset_fields = ['quantity']
 
+# Cart Item Detail View
 class CartItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all CartItem objects
     queryset = CartItem.objects.all()
     # Use CartItemSerializer to serialize the queryset
     serializer_class = CartItemSerializer
 
-# Order Views
-class OrderListView(generics.ListCreateAPIView):
-    # Define the queryset to retrieve all Order objects
-    queryset = Order.objects.all()
-    # Use OrderSerializer to serialize the queryset
-    serializer_class = OrderSerializer
-    # Use the custom pagination class
-    pagination_class = CustomPagination
-    # Add filter backends for searching, ordering, and filtering
-    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
-    # Define search fields
-    search_fields = ['status', 'payment_status']
-    # Define ordering fields
-    ordering_fields = ['order_date', 'status']
-    # Define filterset fields
-    filterset_fields = ['status']
-
-class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
-    # Define the queryset to retrieve all Order objects
-    queryset = Order.objects.all()
-    # Use OrderSerializer to serialize the queryset
-    serializer_class = OrderSerializer
-
-# Review Views
+# Review List View
 class ReviewListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all Review objects
     queryset = Review.objects.all()
@@ -259,38 +251,56 @@ class ReviewListView(generics.ListCreateAPIView):
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['rating', 'meal_kit__name']
+    search_fields = ['rating', 'comment', 'meal_kit__name', 'customer__user__username']
     # Define ordering fields
-    ordering_fields = ['review_date', 'rating']
+    ordering_fields = ['rating', 'created_at']
     # Define filterset fields
     filterset_fields = ['rating']
 
+# Review Detail View
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Define the queryset to retrieve all Review objects
     queryset = Review.objects.all()
     # Use ReviewSerializer to serialize the queryset
     serializer_class = ReviewSerializer
 
-# Payment View
-class PaymentView(APIView):
-    def post(self, request):
-        # Get the currently authenticated user
-        user = request.user
-        # Get the order ID from the request data
-        order_id = request.data.get('order_id')
-        # Retrieve the order by ID
-        order = Order.objects.get(id=order_id)
-        # Create a Razorpay client
+# Razorpay Payment View
+class RazorpayPaymentView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Create Razorpay client using API keys from settings
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-        # Create a Razorpay payment
+        # Get amount and currency from the request data
+        amount = request.data.get('amount')
+        currency = request.data.get('currency', 'INR')
+        # Create order on Razorpay
         payment = client.order.create({
-            'amount': int(order.meal_kit.price * 100),  # Amount in paisa
-            'currency': 'INR',
+            'amount': amount,
+            'currency': currency,
             'payment_capture': '1'
         })
-        # Set the order's payment status to pending
-        order.payment_status = Order.PAYMENT_PENDING
-        # Save the order
-        order.save()
         # Return the payment details
         return Response(payment)
+
+# Order List View
+class OrderListView(generics.ListCreateAPIView):
+    # Define the queryset to retrieve all Order objects
+    queryset = Order.objects.all()
+    # Use OrderSerializer to serialize the queryset
+    serializer_class = OrderSerializer
+    # Use the custom pagination class
+    pagination_class = CustomPagination
+    # Add filter backends for searching, ordering, and filtering
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    # Define search fields
+    search_fields = ['total_price', 'status', 'customer__user__username']
+    # Define ordering fields
+    ordering_fields = ['total_price', 'created_at']
+    # Define filterset fields
+    filterset_fields = ['total_price']
+
+# Order Detail View
+class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
+    # Define the queryset to retrieve all Order objects
+    queryset = Order.objects.all()
+    # Use OrderSerializer to serialize the queryset
+    serializer_class = OrderSerializer

@@ -86,7 +86,7 @@ urlpatterns = [
     path('reviews/<int:pk>/', ReviewDetailView.as_view(), name='review-detail'),
 
     # URL pattern for payment processing
-    path('payment/', PaymentView.as_view(), name='payment'),
+    path('payment/', RazorpayPaymentView.as_view(), name='payment'),
     
     # URL pattern for Swagger UI documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
