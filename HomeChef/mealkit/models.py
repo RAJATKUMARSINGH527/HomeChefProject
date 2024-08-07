@@ -131,7 +131,6 @@ class ChefPlan(models.Model):
     def __str__(self):
         return self.plan_name
 
-# Model representing an Order
 class Order(models.Model):
     # Choices for order status
     PENDING = 'Pending'
@@ -153,7 +152,7 @@ class Order(models.Model):
     user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
     # Foreign key relationship with MealKit model
     meal_kit = models.ForeignKey(MealKit, on_delete=models.CASCADE, related_name='orders')
-    total_price=models.IntegerField(null=True)
+    total_price = models.IntegerField(null=True)
     # Status of the order
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=PENDING)
     # Payment status of the order
@@ -161,10 +160,15 @@ class Order(models.Model):
     # Date and time when the order was placed
     order_date = models.DateTimeField(auto_now_add=True)
     
+    # Razorpay fields
+    razorpay_order_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_payment_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_signature = models.CharField(max_length=255, null=True, blank=True)
 
     # String representation of the Order model
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"
+
 
 # Model representing a Gift Card
 class GiftCard(models.Model):

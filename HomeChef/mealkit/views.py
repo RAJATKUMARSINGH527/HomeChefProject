@@ -264,22 +264,91 @@ class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Use ReviewSerializer to serialize the queryset
     serializer_class = ReviewSerializer
 
-# Razorpay Payment View
+# # Razorpay Payment View
+# class RazorpayPaymentView(APIView):
+#     def post(self, request, *args, **kwargs):
+#         # Create Razorpay client using API keys from settings
+#         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+#         # Get amount and currency from the request data
+#         amount = request.data.get('amount')
+#         currency = request.data.get('currency', 'INR')
+#         # Create order on Razorpay
+#         payment = client.order.create({
+#             'amount': amount,
+#             'currency': currency,
+#             'payment_capture': '1'
+#         })
+#         # Return the payment details
+#         return Response(payment)
+    
 class RazorpayPaymentView(APIView):
     def post(self, request, *args, **kwargs):
         # Create Razorpay client using API keys from settings
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
         # Get amount and currency from the request data
         amount = request.data.get('amount')
         currency = request.data.get('currency', 'INR')
-        # Create order on Razorpay
+        user_id = request.data.get('user_id')
+        meal_kit_id = request.data.get('meal_kit_id')
+        
+        if not amount or not user_id or not meal_kit_id:
+            return Response({"error": "Amount, user ID, and meal kit ID are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create an order on Razorpay
         payment = client.order.create({
-            'amount': amount,
+            'amount': int(amount) * 100,  # Amount should be in paise
             'currency': currency,
             'payment_capture': '1'
         })
-        # Return the payment details
-        return Response(payment)
+        
+        razorpay_order_id = payment['id']
+        
+        # Create an order in your system
+        order = Order.objects.create(
+            user_id=user_id,
+            meal_kit_id=meal_kit_id,
+            total_price=amount,
+            razorpay_order_id=razorpay_order_id
+        )
+        
+        # Return the payment details and order ID
+        return Response({
+            'order_id': razorpay_order_id,
+            'amount': amount,
+            'currency': currency,
+            'order': order.id
+        })
+
+class VerifyPaymentView(APIView):
+    def post(self, request, *args, **kwargs):
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_signature = request.data.get('razorpay_signature')
+        order_id = request.data.get('order_id')
+
+        # Verify the payment signature
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        order = Order.objects.get(id=order_id)
+        
+        try:
+            client.utility.verify_payment_signature({
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            })
+            
+            # Update the order status
+            order.payment_status = Order.PAID
+            order.status = Order.COMPLETED
+            order.razorpay_payment_id = razorpay_payment_id
+            order.razorpay_signature = razorpay_signature
+            order.save()
+            
+            return Response({"success": "Payment verified and order completed"})
+        
+        except razorpay.errors.SignatureVerificationError:
+            return Response({"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST)
 
 # Order List View
 class OrderListView(generics.ListCreateAPIView):

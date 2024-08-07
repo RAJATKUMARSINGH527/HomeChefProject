@@ -159,3 +159,6 @@ SIMPLE_JWT = {
 
 
 AUTH_USER_MODEL = 'mealkit.User'
+
+RAZORPAY_KEY_ID = 'your_key_id'
+RAZORPAY_KEY_SECRET = 'your_key_secret'
