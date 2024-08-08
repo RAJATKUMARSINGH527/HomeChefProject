@@ -178,7 +178,7 @@ class GiftCard(models.Model):
     is_active = models.BooleanField(default=True,null=True)
 
     def __str__(self):
-        return f"Gift Card {self.code}"
+        return f"Gift Card {self.gift_type}"
 
 # Model representing a CartItem
 class CartItem(models.Model):

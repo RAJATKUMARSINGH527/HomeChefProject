@@ -63,7 +63,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 # Customize the GiftCard model admin interface
 class GiftCardAdmin(admin.ModelAdmin):
-    list_display = ('gift_type', 'gift_amount', 'quantity',)
+    list_display = ('gift_type', 'gift_amount','expiry_date','quantity',)
     search_fields = ('gift_type', 'customer__user__username')
     list_filter = ('gift_amount',)
 
@@ -85,6 +85,13 @@ class PaymentAdmin(admin.ModelAdmin):
     search_fields = ('order__id', 'payment_method')
     list_filter = ('payment_method', 'payment_date')
 
+class DeliveryAdmin(admin.ModelAdmin):
+    list_display = ('order', 'delivery_date', 'delivery_address', 'delivery_status')
+    search_fields = ('order__id', 'delivery_date')
+    list_filter = ('delivery_date', 'delivery_status')
+
+
+
 # Register models and their corresponding admin classes with the Django admin site
 admin.site.register(User, UserAdmin)
 admin.site.register(Company, CompanyAdmin)
@@ -100,3 +107,4 @@ admin.site.register(GiftCard, GiftCardAdmin)
 admin.site.register(CartItem, CartItemAdmin)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Payment, PaymentAdmin)
+admin.site.register(Delivery,DeliveryAdmin)
