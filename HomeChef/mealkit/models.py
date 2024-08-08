@@ -1,20 +1,14 @@
-# Import AbstractUser for extending the default User model
 from django.contrib.auth.models import AbstractUser
-# Import models from Django's ORM
 from django.db import models
 
 # Custom User model extending AbstractUser
 class User(AbstractUser):
-    # Boolean field to check if the user is a chef
     is_chef = models.BooleanField(default=False)
-    # Boolean field to check if the user is a customer
     is_customer = models.BooleanField(default=False)
-    # Boolean field to check if the user is a company
     is_company = models.BooleanField(default=False)
 
 # Model representing a Company
 class Company(models.Model):
-    # Choices for food type
     VEG = 'veg'
     NON_VEG = 'non_veg'
     BOTH = 'both'
@@ -25,7 +19,6 @@ class Company(models.Model):
         (BOTH, 'Both'),
     ]
 
-    # Choices for meal category
     BREAKFAST = 'breakfast'
     LUNCH = 'lunch'
     DINNER = 'dinner'
@@ -36,103 +29,113 @@ class Company(models.Model):
         (DINNER, 'Dinner'),
     ]
 
-    # One-to-one relationship with User model
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
-    # Company name
     company_name = models.CharField(max_length=255)
-    # Email address
     email = models.EmailField()
-    # Food type choice
     food_type = models.CharField(max_length=10, choices=FOOD_TYPE_CHOICES, default=BOTH)
-    # Meal category choice
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default=LUNCH)
 
-    # String representation of the Company model
     def __str__(self):
         return self.company_name
 
 # Model representing a Subscription Plan
 class SubscriptionPlan(models.Model):
-    # Choices for plan type
     PLAN_TYPE_CHOICES = [
         ('2peopleperweek', '2 People Per Week Plan'),
         ('4peopleperweek', '4 People Per Week Plan'),
     ]
 
-    # Plan name with choices
     plan_name = models.CharField(max_length=255, choices=PLAN_TYPE_CHOICES, default='2peopleperweek')
-    # Description of the plan
     description = models.TextField(blank=True, null=True)
-    # Price of the plan
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    # Number of meals per week
+    duration = models.DurationField(help_text="Duration of the subscription",null=True)
     meals_per_week = models.IntegerField()
-    # One-to-one relationship with Company model
     company = models.OneToOneField(Company, on_delete=models.CASCADE, related_name='subscription_plan')
+    is_active = models.BooleanField(default=True)
 
-    # String representation of the SubscriptionPlan model
     def __str__(self):
         return self.plan_name
 
 # Model representing a Customer
 class Customer(models.Model):
-    # One-to-one relationship with User model
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
-    # Customer name
     customer_name = models.CharField(max_length=20, null=True, blank=True)
-    # Gender choice
     gender = models.CharField(choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], max_length=10)
-    # Age of the customer
     age = models.IntegerField(null=True, blank=True)
-    # Mobile number of the customer
     mobile = models.CharField(max_length=10)
-    # Address of the customer
     address = models.TextField(blank=True, null=True)
-    # Foreign key relationship with SubscriptionPlan model
-    subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, related_name='customers', blank=True)
+    preferences = models.TextField(blank=True, null=True)
+    dietary_restrictions = models.TextField(blank=True, null=True)
 
-    # String representation of the Customer model
     def __str__(self):
-        return self.user.username
+        return self.user.username if self.user else "Unnamed Customer"
+
+class Subscription(models.Model):
+    customer_name = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='subscriptions')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='subscriptions')
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Subscription for {self.customer_name} - {self.plan} ({self.start_date.date()} to {self.end_date.date()})"
+    
+# Model representing a Chef
+class ChefProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='chef_profile', null=True, blank=True)
+    chef_name = models.CharField(max_length=50, null=True)
+    bio = models.TextField(blank=True, null=True)
+    cooking_experience = models.IntegerField(help_text="Years of experience")
+    speciality = models.CharField(max_length=255, help_text="Chef's speciality dishes")
+    rating = models.FloatField(default=0.0)
+
+    def __str__(self):
+        return self.chef_name if self.chef_name else "Unnamed Chef"
 
 # Model representing a Meal Kit
 class MealKit(models.Model):
-    # Name of the meal
+    chef = models.ForeignKey(ChefProfile, on_delete=models.CASCADE, related_name='meal_kits')
     meal_name = models.CharField(max_length=255)
-    # Description of the meal
     description = models.TextField(blank=True)
-    # Price of the meal
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    # Foreign key relationship with Customer model (chef)
-    chef = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='meal_kits')
-    # Ingredients of the meal
+    preparation_time = models.DurationField(null=True)
+    servings = models.IntegerField(null=True)
     ingredients = models.TextField()
+    is_available = models.BooleanField(default=True)
 
-    # String representation of the MealKit model
     def __str__(self):
         return self.meal_name
 
-# Model representing a Chef Plan
-class ChefPlan(models.Model):
-    # One-to-one relationship with User model
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
-    # One-to-one relationship with Customer model (chef)
-    chef = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='chef_plan')
-    # Name of the plan
-    plan_name = models.CharField(max_length=255)
-    # Cooking experience in years
-    cooking_experience = models.IntegerField()
-    # Type of event the chef plan is for
-    event_type = models.CharField(max_length=255)
-    # Price of the chef plan
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+class ChefKartService(models.Model):
+    SERVICE_TYPE_CHOICES = (
+        ('one_time_cook', 'One-time Cook'),
+        ('monthly_cook', 'Monthly Cook'),
+        ('party_chef', 'Party Chef'),
+    )
 
-    # String representation of the ChefPlan model
+    chef = models.ForeignKey(ChefProfile, on_delete=models.CASCADE, related_name='services')
+    service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    duration = models.DurationField(help_text="Duration of the service")
+    available = models.BooleanField(default=True)
+
     def __str__(self):
-        return self.plan_name
+        return f"{self.service_type} by {self.chef}"
+
+class ChefServiceBooking(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='bookings')
+    service = models.ForeignKey(ChefKartService, on_delete=models.CASCADE, related_name='bookings')
+    event_type = models.CharField(max_length=255)
+    booking_date = models.DateTimeField(auto_now_add=True)
+    service_date = models.DateTimeField()
+    status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('confirmed', 'Confirmed'), ('completed', 'Completed'), ('cancelled', 'Cancelled')], default='pending')
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"Booking for {self.service} by {self.customer}"
 
 class Order(models.Model):
-    # Choices for order status
     PENDING = 'Pending'
     COMPLETED = 'Completed'
     PAYMENT_PENDING = 'Pending'
@@ -148,76 +151,73 @@ class Order(models.Model):
         (PAID, 'Paid'),
     ]
 
-    # Foreign key relationship with Customer model (user)
-    user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
-    # Foreign key relationship with MealKit model
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='orders')
     meal_kit = models.ForeignKey(MealKit, on_delete=models.CASCADE, related_name='orders')
-    total_price = models.IntegerField(null=True)
-    # Status of the order
+    quantity = models.IntegerField(null=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=PENDING)
-    # Payment status of the order
     payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_PENDING)
-    # Date and time when the order was placed
     order_date = models.DateTimeField(auto_now_add=True)
-    
-    # Razorpay fields
-    razorpay_order_id = models.CharField(max_length=255, null=True, blank=True)
-    razorpay_payment_id = models.CharField(max_length=255, null=True, blank=True)
-    razorpay_signature = models.CharField(max_length=255, null=True, blank=True)
 
-    # String representation of the Order model
     def __str__(self):
-        return f"Order {self.id} by {self.user.username}"
-
+        return f"Order {self.id} by {self.customer}"
 
 # Model representing a Gift Card
 class GiftCard(models.Model):
-    # Choices for gift amount
     GIFT_AMOUNT_CHOICES = [
         (70, '$70'),
-        (140, '$140'),
-        (280, '$280')
+        (100, '$100'),
+        (150, '$150'),
     ]
 
-    # Type of the gift
     gift_type = models.CharField(max_length=255, default='Meal')
-    # Amount of the gift card
     gift_amount = models.IntegerField(choices=GIFT_AMOUNT_CHOICES)
-    # Quantity of gift cards
     quantity = models.PositiveIntegerField(default=1)
-    # Foreign key relationship with Customer model
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='giftcards')
+    issue_date = models.DateTimeField(auto_now_add=True,null=True)
+    expiry_date = models.DateTimeField(null=True)
+    is_active = models.BooleanField(default=True,null=True)
 
-    # String representation of the GiftCard model
     def __str__(self):
-        return f"{self.gift_type} - {self.gift_amount}"
+        return f"Gift Card {self.code}"
 
-# Model representing a Cart Item
+# Model representing a CartItem
 class CartItem(models.Model):
-    # Foreign key relationship with Customer model (user)
-    user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='cart_items')
-    # Foreign key relationship with GiftCard model
-    gift_card = models.ForeignKey(GiftCard, on_delete=models.CASCADE)
-    # Quantity of the cart item
-    quantity = models.PositiveIntegerField(default=1)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='cart_items',null=True)
+    meal_kit = models.ForeignKey(MealKit, on_delete=models.CASCADE, related_name='cart_items',null=True)
+    quantity = models.IntegerField(default=1,null=True)
+    total_gift_amount=models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    gift_card = models.ForeignKey(GiftCard, on_delete=models.SET_NULL, null=True, blank=True, related_name='cart_items')
 
-    # String representation of the CartItem model
     def __str__(self):
-        return f"{self.user.username} - {self.gift_card}"
+        return f"CartItem {self.id} for {self.customer}"
 
 # Model representing a Review
 class Review(models.Model):
-    # Foreign key relationship with Customer model (user)
-    user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='reviews')
-    # Foreign key relationship with MealKit model
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='reviews')
     meal_kit = models.ForeignKey(MealKit, on_delete=models.CASCADE, related_name='reviews')
-    # Rating given by the user
-    rating = models.PositiveIntegerField()
-    # Comment by the user
-    comment = models.TextField()
-    # Date and time when the review was created
-    review_date = models.DateTimeField(auto_now_add=True)
-
-    # String representation of the Review model
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(blank=True)
+    review_date=models.DateTimeField()
     def __str__(self):
-        return f"Review {self.id} by {self.user.username}"
+        return f"Review by {self.customer} for {self.meal_kit}"
+
+# Model representing a Payment
+class Payment(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    payment_method = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('completed', 'Completed')], default='pending')
+
+    def __str__(self):
+        return f"Payment {self.id} for Order {self.order.id}"
+
+# Model representing a Delivery
+class Delivery(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='delivery')
+    delivery_date = models.DateTimeField()
+    delivery_address = models.TextField()
+    delivery_status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('in_progress', 'In Progress'), ('completed', 'Completed')], default='pending')
+
+    def __str__(self):
+        return f"Delivery {self.id} for Order {self.order.id}"

@@ -30,7 +30,6 @@ redoc_view = get_redoc_view(
 )
 
 urlpatterns = [
-
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
@@ -40,25 +39,33 @@ urlpatterns = [
     # URL pattern for user login
     path('login/', UserLoginView.as_view(), name='login'),
 
+    # URL pattern for user logout
+    path('logout/', Logout.as_view(), name='logout'),
+
     # URL pattern for listing customers view
     path('customers/', CustomerListView.as_view(), name='customer-list'),
-     # URL pattern for customers detail view
+    # URL pattern for customers detail view
     path('customers/<int:pk>/', CustomerDetailView.as_view(), name='customer-detail'),
 
     # URL pattern for listing companies
-    path('companies/', CompanyListView.as_view(), name='company-list'),
+    path('companies/', CompanyListCreateView.as_view(), name='company-list'),
     # URL pattern for company detail view
     path('companies/<int:pk>/', CompanyDetailView.as_view(), name='company-detail'),
 
-    # URL pattern for listing chef plans
-    path('chef-plans/', ChefPlanListView.as_view(), name='chef-plan-list'),
-    # URL pattern for chef plan detail view
-    path('chef-plans/<int:pk>/', ChefPlanDetailView.as_view(), name='chef-plan-detail'),
+    # URL pattern for listing chef profiles
+    path('chef-profiles/', ChefProfileListCreateView.as_view(), name='chef-profile-list'),
+    # URL pattern for chef profile detail view
+    path('chef-profiles/<int:pk>/', ChefProfileDetailView.as_view(), name='chef-profile-detail'),
 
     # URL pattern for listing subscription plans
     path('subscription-plans/', SubscriptionPlanListView.as_view(), name='subscription-plan-list'),
     # URL pattern for subscription plan detail view
     path('subscription-plans/<int:pk>/', SubscriptionPlanDetailView.as_view(), name='subscription-plan-detail'),
+
+    # URL pattern for listing subscriptions
+    path('subscriptions/', SubscriptionListView.as_view(), name='subscription-list'),
+    # URL pattern for subscription detail view
+    path('subscriptions/<int:pk>/', SubscriptionDetailView.as_view(), name='subscription-detail'),
 
     # URL pattern for listing meal kits
     path('meal-kits/', MealKitListView.as_view(), name='meal-kit-list'),
@@ -71,9 +78,9 @@ urlpatterns = [
     path('gift-cards/<int:pk>/', GiftCardDetailView.as_view(), name='gift-card-detail'),
 
     # URL pattern for listing cart items
-    path('cart-items/', CartItemListView.as_view(), name='cart-item-list'),
+    path('cart/', CartItemListView.as_view(), name='cart-item-list'),
     # URL pattern for cart item detail view
-    path('cart-items/<int:pk>/', CartItemDetailView.as_view(), name='cart-item-detail'),
+    path('cart/<int:pk>/', CartItemDetailView.as_view(), name='cart-item-detail'),
 
     # URL pattern for listing orders
     path('orders/', OrderListView.as_view(), name='order-list'),
@@ -85,10 +92,16 @@ urlpatterns = [
     # URL pattern for review detail view
     path('reviews/<int:pk>/', ReviewDetailView.as_view(), name='review-detail'),
 
-    # URL pattern for payment processing
-    path('razorpay/', RazorpayPaymentView.as_view(), name='razorpay-payment'),
-    path('verify/', VerifyPaymentView.as_view(), name='verify-payment'),
-    
+    # URL pattern for listing deliveries
+    path('deliveries/', DeliveryListView.as_view(), name='delivery-list'),
+    # URL pattern for delivery detail view
+    path('deliveries/<int:pk>/', DeliveryDetailView.as_view(), name='delivery-detail'),
+
+    # URL pattern for listing payments
+    path('payments/', PaymentListView.as_view(), name='payment-list'),
+    # URL pattern for payment detail view
+    path('payments/<int:pk>/', PaymentDetailView.as_view(), name='payment-detail'),
+
     # URL pattern for Swagger UI documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     # URL pattern for ReDoc documentation

@@ -1,12 +1,12 @@
 # Import necessary modules and classes from rest_framework and other packages
 from rest_framework import generics, status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken ,BlacklistedToken
 from .models import *
 from .serializers import *
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-import razorpay
-from django.conf import settings
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -74,6 +74,17 @@ class UserLoginView(APIView):
             # Return an error if the credentials are invalid
             return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
+class Logout(APIView):
+    def post(self,request):
+        try:
+            token=OutstandingToken.objects.filter(user=request.user).latest('created_at')
+            BlacklistedToken.objects.create(token=token)
+            return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
 # Customer List View
 class CustomerListView(generics.ListAPIView):
     # Define the queryset to retrieve all Customer objects
@@ -97,7 +108,7 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CustomerSerializer
 
 # Company List View
-class CompanyListView(generics.ListCreateAPIView):
+class CompanyListCreateView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all Company objects
     queryset = Company.objects.all()
     # Use CompanyRegisterSerializer to serialize the queryset
@@ -120,29 +131,29 @@ class CompanyDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Use CompanySerializer to serialize the queryset
     serializer_class = CompanySerializer
 
-# Chef Plan List View
-class ChefPlanListView(generics.ListCreateAPIView):
-    # Define the queryset to retrieve all ChefPlan objects
-    queryset = ChefPlan.objects.all()
-    # Use ChefPlanSerializer to serialize the queryset
-    serializer_class = ChefPlanSerializer
+# ChefProfile List View
+class ChefProfileListCreateView(generics.ListCreateAPIView):
+    # Define the queryset to retrieve all ChefProfile objects
+    queryset = ChefProfile.objects.all()
+    # Use ChefProfileSerializer to serialize the queryset
+    serializer_class = ChefProfileRegisterSerializer
     # Use the custom pagination class
     pagination_class = CustomPagination
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['price', 'chef__user__username']
+    search_fields = ['chef_name', 'cooking_experience', 'speciality']
     # Define ordering fields
-    ordering_fields = ['price', 'plan_name']
+    ordering_fields = ['chef_name', 'rating']
     # Define filterset fields
-    filterset_fields = ['price']
+    filterset_fields = ['speciality']
 
-# Chef Plan Detail View
-class ChefPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
-    # Define the queryset to retrieve all ChefPlan objects
-    queryset = ChefPlan.objects.all()
-    # Use ChefPlanSerializer to serialize the queryset
-    serializer_class = ChefPlanSerializer
+# ChefProfile Detail View
+class ChefProfileDetailView(generics.RetrieveUpdateDestroyAPIView):
+    # Define the queryset to retrieve all ChefProfile objects
+    queryset = ChefProfile.objects.all()
+    # Use ChefProfileSerializer to serialize the queryset
+    serializer_class = ChefProfileSerializer
 
 # Subscription Plan List View
 class SubscriptionPlanListView(generics.ListCreateAPIView):
@@ -155,7 +166,7 @@ class SubscriptionPlanListView(generics.ListCreateAPIView):
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['price', 'meals_per_week', 'company__name']
+    search_fields = ['price', 'meals_per_week', 'company__company_name']
     # Define ordering fields
     ordering_fields = ['price', 'meals_per_week']
     # Define filterset fields
@@ -168,6 +179,30 @@ class SubscriptionPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Use SubscriptionPlanSerializer to serialize the queryset
     serializer_class = SubscriptionPlanSerializer
 
+# Subscription List View
+class SubscriptionListView(generics.ListCreateAPIView):
+    # Define the queryset to retrieve all Subscription objects
+    queryset = Subscription.objects.all()
+    # Use SubscriptionSerializer to serialize the queryset
+    serializer_class = SubscriptionSerializer
+    # Use the custom pagination class
+    pagination_class = CustomPagination
+    # Add filter backends for searching, ordering, and filtering
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    # Define search fields
+    search_fields = ['customer__customer_name', 'plan__plan_name']
+    # Define ordering fields
+    ordering_fields = ['start_date', 'end_date']
+    # Define filterset fields
+    filterset_fields = ['start_date', 'end_date']
+
+# Subscription Detail View
+class SubscriptionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    # Define the queryset to retrieve all Subscription objects
+    queryset = Subscription.objects.all()
+    # Use SubscriptionSerializer to serialize the queryset
+    serializer_class = SubscriptionSerializer
+
 # Meal Kit List View
 class MealKitListView(generics.ListCreateAPIView):
     # Define the queryset to retrieve all MealKit objects
@@ -179,11 +214,11 @@ class MealKitListView(generics.ListCreateAPIView):
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['price', 'chef__user__username']
+    search_fields = ['meal_name', 'ingredients', 'company__company_name']
     # Define ordering fields
-    ordering_fields = ['price', 'meal_name']
+    ordering_fields = ['meal_name', 'price']
     # Define filterset fields
-    filterset_fields = ['price']
+    filterset_fields = ['meal_name']
 
 # Meal Kit Detail View
 class MealKitDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -203,11 +238,11 @@ class GiftCardListView(generics.ListCreateAPIView):
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['value', 'status']
+    search_fields = ['card_number', 'amount', 'customer__customer_name']
     # Define ordering fields
-    ordering_fields = ['value', 'created_at']
+    ordering_fields = ['amount', 'expiry_date']
     # Define filterset fields
-    filterset_fields = ['value']
+    filterset_fields = ['expiry_date']
 
 # Gift Card Detail View
 class GiftCardDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -227,9 +262,9 @@ class CartItemListView(generics.ListCreateAPIView):
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['quantity', 'meal_kit__name', 'customer__user__username']
+    search_fields = ['quantity', 'meal_kit__meal_name']
     # Define ordering fields
-    ordering_fields = ['quantity', 'created_at']
+    ordering_fields = ['quantity', 'meal_kit']
     # Define filterset fields
     filterset_fields = ['quantity']
 
@@ -239,116 +274,6 @@ class CartItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CartItem.objects.all()
     # Use CartItemSerializer to serialize the queryset
     serializer_class = CartItemSerializer
-
-# Review List View
-class ReviewListView(generics.ListCreateAPIView):
-    # Define the queryset to retrieve all Review objects
-    queryset = Review.objects.all()
-    # Use ReviewSerializer to serialize the queryset
-    serializer_class = ReviewSerializer
-    # Use the custom pagination class
-    pagination_class = CustomPagination
-    # Add filter backends for searching, ordering, and filtering
-    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
-    # Define search fields
-    search_fields = ['rating', 'comment', 'meal_kit__name', 'customer__user__username']
-    # Define ordering fields
-    ordering_fields = ['rating', 'created_at']
-    # Define filterset fields
-    filterset_fields = ['rating']
-
-# Review Detail View
-class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
-    # Define the queryset to retrieve all Review objects
-    queryset = Review.objects.all()
-    # Use ReviewSerializer to serialize the queryset
-    serializer_class = ReviewSerializer
-
-# # Razorpay Payment View
-# class RazorpayPaymentView(APIView):
-#     def post(self, request, *args, **kwargs):
-#         # Create Razorpay client using API keys from settings
-#         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-#         # Get amount and currency from the request data
-#         amount = request.data.get('amount')
-#         currency = request.data.get('currency', 'INR')
-#         # Create order on Razorpay
-#         payment = client.order.create({
-#             'amount': amount,
-#             'currency': currency,
-#             'payment_capture': '1'
-#         })
-#         # Return the payment details
-#         return Response(payment)
-    
-class RazorpayPaymentView(APIView):
-    def post(self, request, *args, **kwargs):
-        # Create Razorpay client using API keys from settings
-        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-        
-        # Get amount and currency from the request data
-        amount = request.data.get('amount')
-        currency = request.data.get('currency', 'INR')
-        user_id = request.data.get('user_id')
-        meal_kit_id = request.data.get('meal_kit_id')
-        
-        if not amount or not user_id or not meal_kit_id:
-            return Response({"error": "Amount, user ID, and meal kit ID are required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create an order on Razorpay
-        payment = client.order.create({
-            'amount': int(amount) * 100,  # Amount should be in paise
-            'currency': currency,
-            'payment_capture': '1'
-        })
-        
-        razorpay_order_id = payment['id']
-        
-        # Create an order in your system
-        order = Order.objects.create(
-            user_id=user_id,
-            meal_kit_id=meal_kit_id,
-            total_price=amount,
-            razorpay_order_id=razorpay_order_id
-        )
-        
-        # Return the payment details and order ID
-        return Response({
-            'order_id': razorpay_order_id,
-            'amount': amount,
-            'currency': currency,
-            'order': order.id
-        })
-
-class VerifyPaymentView(APIView):
-    def post(self, request, *args, **kwargs):
-        razorpay_order_id = request.data.get('razorpay_order_id')
-        razorpay_payment_id = request.data.get('razorpay_payment_id')
-        razorpay_signature = request.data.get('razorpay_signature')
-        order_id = request.data.get('order_id')
-
-        # Verify the payment signature
-        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-        order = Order.objects.get(id=order_id)
-        
-        try:
-            client.utility.verify_payment_signature({
-                'razorpay_order_id': razorpay_order_id,
-                'razorpay_payment_id': razorpay_payment_id,
-                'razorpay_signature': razorpay_signature
-            })
-            
-            # Update the order status
-            order.payment_status = Order.PAID
-            order.status = Order.COMPLETED
-            order.razorpay_payment_id = razorpay_payment_id
-            order.razorpay_signature = razorpay_signature
-            order.save()
-            
-            return Response({"success": "Payment verified and order completed"})
-        
-        except razorpay.errors.SignatureVerificationError:
-            return Response({"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST)
 
 # Order List View
 class OrderListView(generics.ListCreateAPIView):
@@ -361,11 +286,11 @@ class OrderListView(generics.ListCreateAPIView):
     # Add filter backends for searching, ordering, and filtering
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     # Define search fields
-    search_fields = ['total_price', 'status', 'customer__user__username']
+    search_fields = ['customer__customer_name', 'total_amount']
     # Define ordering fields
-    ordering_fields = ['total_price', 'created_at']
+    ordering_fields = ['total_amount', 'status']
     # Define filterset fields
-    filterset_fields = ['total_price']
+    filterset_fields = ['status']
 
 # Order Detail View
 class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -373,3 +298,75 @@ class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Order.objects.all()
     # Use OrderSerializer to serialize the queryset
     serializer_class = OrderSerializer
+
+# Review List View
+class ReviewListView(generics.ListCreateAPIView):
+    # Define the queryset to retrieve all Review objects
+    queryset = Review.objects.all()
+    # Use ReviewSerializer to serialize the queryset
+    serializer_class = ReviewSerializer
+    # Use the custom pagination class
+    pagination_class = CustomPagination
+    # Add filter backends for searching, ordering, and filtering
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    # Define search fields
+    search_fields = ['review_text', 'rating', 'meal_kit__meal_name']
+    # Define ordering fields
+    ordering_fields = ['rating', 'review_date']
+    # Define filterset fields
+    filterset_fields = ['rating']
+
+# Review Detail View
+class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
+    # Define the queryset to retrieve all Review objects
+    queryset = Review.objects.all()
+    # Use ReviewSerializer to serialize the queryset
+    serializer_class = ReviewSerializer
+
+# Delivery List View
+class DeliveryListView(generics.ListCreateAPIView):
+    # Define the queryset to retrieve all Delivery objects
+    queryset = Delivery.objects.all()
+    # Use DeliverySerializer to serialize the queryset
+    serializer_class = DeliverySerializer
+    # Use the custom pagination class
+    pagination_class = CustomPagination
+    # Add filter backends for searching, ordering, and filtering
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    # Define search fields
+    search_fields = ['delivery_date', 'delivery_status']
+    # Define ordering fields
+    ordering_fields = ['delivery_date', 'delivery_status']
+    # Define filterset fields
+    filterset_fields = ['delivery_status']
+
+# Delivery Detail View
+class DeliveryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    # Define the queryset to retrieve all Delivery objects
+    queryset = Delivery.objects.all()
+    # Use DeliverySerializer to serialize the queryset
+    serializer_class = DeliverySerializer
+
+# Payment List View
+class PaymentListView(generics.ListCreateAPIView):
+    # Define the queryset to retrieve all Payment objects
+    queryset = Payment.objects.all()
+    # Use PaymentSerializer to serialize the queryset
+    serializer_class = PaymentSerializer
+    # Use the custom pagination class
+    pagination_class = CustomPagination
+    # Add filter backends for searching, ordering, and filtering
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    # Define search fields
+    search_fields = ['payment_date', 'amount', 'customer__customer_name']
+    # Define ordering fields
+    ordering_fields = ['payment_date', 'amount']
+    # Define filterset fields
+    filterset_fields = ['payment_date']
+
+# Payment Detail View
+class PaymentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    # Define the queryset to retrieve all Payment objects
+    queryset = Payment.objects.all()
+    # Use PaymentSerializer to serialize the queryset
+    serializer_class = PaymentSerializer
